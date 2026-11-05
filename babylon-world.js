@@ -42,6 +42,7 @@ async function prepareBattle3D(){
  const sky=new BABYLON.HemisphericLight('sky',new BABYLON.Vector3(0,1,0),s);sky.intensity=.85;sky.groundColor=new BABYLON.Color3(.3,.34,.28);const sun=new BABYLON.DirectionalLight('sun',new BABYLON.Vector3(-.5,-1,.4),s);sun.intensity=.65;
  battle3D.camera=new BABYLON.FreeCamera('battle-camera',new BABYLON.Vector3(0,900,-900),s);battle3D.camera.minZ=1;battle3D.camera.maxZ=WORLD*4;battle3D.camera.fov=.8;
  b3Terrain();b3Structures();
+ await prepareMaipiModel(s);
  await s.whenReadyAsync();battle3D.ready=true;b3Camera(true);
 }
 function b3Air(){return state==='paused'?resumeState:state}
@@ -61,7 +62,9 @@ function drawBattle3D(){
  b3Camera();const seen=new Set(),air=b3Air();
  for(const g of battle3D.roofGroups){const inside=rectHit(p.x,p.y,30,g.building);g.roof.setEnabled(!inside);if(g.wall)g.wall.visibility=inside?.3:1;}
  for(const e of enemies)if(dist(e,p)<5500)b3Actor(e,false,seen);
- if(!p.vehicle&&air!=='plane'&&air!=='parachute')b3Actor(p,true,seen);
+ const grounded=!p.vehicle&&air!=='plane'&&air!=='parachute';
+ syncMaipiModel(grounded&&selected===0);
+ if(grounded&&selected!==0)b3Actor(p,true,seen);
  for(const v of vehicles){if(dist(v,p)>5500)continue;const n=v.type==='bike'?9:v.type==='boat'?10:8;b3Sync(v,()=>b3Sprite('vehicle','world',n%4,Math.floor(n/4),4,4,145,120),m=>m.position.set(v.x,50,v.y),seen)}
  if(air==='plane'||air==='parachute'){const n=air==='plane'?3:0,h=air==='plane'?400:210;b3Sync('air',()=>b3Sprite('air','air',n%2,Math.floor(n/2),2,2,800,400),m=>{b3UV(m,n%2,Math.floor(n/2),2,2);m.scaling.setAll(h/400);m.position.set(p.x,b3Altitude()+h*.6,p.y)},seen)}
  for(const i of [...loot,...boxes]){if(dist(i,p)>2200)continue;const box=!!i.items,n=box?8:itemAtlasIndex(i),color=box?'#ffce78':i.kind==='gun'?'#ffe59d':'#90efe0';b3Sync(i,()=>b3Sprite('loot',box?'effects':'items',n%4,Math.floor(n/4),4,4,box?72:42,box?72:42),m=>{m.position.set(i.x,24+Math.sin(time*3+i.x)*3,i.y)},seen);if(dist(i,p)<350&&!i.empty)b3Label(i,box?'◆ 战利品箱':i.name,color,65)}
