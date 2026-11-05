@@ -1,11 +1,11 @@
 'use strict';
-const heroSkills=[{name:'闪现',cd:8,duration:0},{name:'旋风腿',cd:14,duration:2.5},{name:'坚盾',cd:18,duration:5},{name:'飞钩',cd:10,duration:0},{name:'警犬出击',cd:26,duration:14},{name:'隐身',cd:22,duration:8}];
+const heroSkills=[{name:'闪现',cd:3,duration:0},{name:'旋风腿',cd:14,duration:2.5},{name:'坚盾',cd:18,duration:5},{name:'飞钩',cd:10,duration:0},{name:'警犬出击',cd:26,duration:14},{name:'隐身',cd:22,duration:8}];
 let skill={cd:0,left:0,active:null},dogs=[],hook=null;
 function resetSkill(){skill={cd:0,left:0,active:null};dogs=[];hook=null}
 function skillHud(){const s=heroSkills[selected];return '[ 空格 ] '+s.name+' · '+(skill.left>0?'持续 '+skill.left.toFixed(1)+'s':skill.cd>0?'冷却 '+Math.ceil(skill.cd)+'s':'准备就绪')}
 function breakStealth(){if(skill.active==='stealth'){skill.left=0;skill.active=null;toast('主动攻击，隐身解除')}}
 function useSkill(){if(state!=='playing'||bag||p.vehicle)return;if(skill.cd>0){toast('技能冷却中：'+Math.ceil(skill.cd)+'秒');return}const s=heroSkills[selected],angle=aimAngle();
-if(selected===0){let target=null;for(let d=8;d<=320;d+=8){let x=p.x+Math.cos(angle)*d,y=p.y+Math.sin(angle)*d;if(blocked(x,y,14))break;target={x,y}}if(!target){toast('前方被阻挡，无法闪现');return}effects.push({x:p.x,y:p.y,r:33,color:'#c1f5a7',life:.3});p.x=target.x;p.y=target.y;effects.push({x:p.x,y:p.y,r:36,color:'#d5ffbd',life:.3})}
+if(selected===0){let target=null;for(let d=8;d<=720;d+=8){let x=p.x+Math.cos(angle)*d,y=p.y+Math.sin(angle)*d;if(blocked(x,y,14))break;target={x,y}}if(!target){toast('前方被阻挡，无法闪现');return}effects.push({x:p.x,y:p.y,r:33,color:'#c1f5a7',life:.3});p.x=target.x;p.y=target.y;effects.push({x:p.x,y:p.y,r:36,color:'#d5ffbd',life:.3})}
 if(selected===1){skill.active='spin';skill.left=s.duration;breakStealth()}
 if(selected===2){skill.active='shield';skill.left=s.duration}
 if(selected===3){const targets=enemies.filter(e=>e.hp>0&&dist(e,p)<550&&Math.cos(Math.atan2(e.y-p.y,e.x-p.x)-angle)>.86&&lineClear(e,p)).sort((a,b)=>dist(a,p)-dist(b,p));let e=targets[0];if(e){hook={target:e,left:.5};e.stunned=.65}else{hook={x:p.x+Math.cos(angle)*500,y:p.y+Math.sin(angle)*500,left:.35};toast('飞钩未命中')}}

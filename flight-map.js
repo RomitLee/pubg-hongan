@@ -1,7 +1,7 @@
 'use strict';
 let fullMapOpen=false;
 function mobileDevice(){if(typeof navigator==='undefined')return false;const n=navigator;return !!(n.userAgentData&&n.userAgentData.mobile)||/Android|iPhone|iPad|iPod|Mobile/i.test(n.userAgent||'')||(/Macintosh/.test(n.userAgent||'')&&n.maxTouchPoints>1)}
-function viewZoom(){const air=state==='paused'?resumeState:state;if(air==='plane')return .36;if(air==='parachute'&&insertion){const t=clamp(1-insertion.left/insertion.duration,0,1);return .36+.82*t*t*(3-2*t)}return 1}
+function viewZoom(){const air=state==='paused'?resumeState:state;if(air==='plane')return .36;if(air==='parachute'&&insertion){const t=clamp(1-insertion.left/insertion.duration,0,1);return .36+.64*t*t*t*(t*(t*6-15)+10)}return 1}
 function canReachLoot(item,radius=110){return dist(item,p)<=radius&&insideBuilding(item)===insideBuilding(p)&&lineClear(p,item)}
 function drawFlightAtmosphere(){const z=viewZoom();if(z>=1)return;ctx.save();ctx.fillStyle='rgba(176,211,235,'+(.16*(1-z))+')';ctx.fillRect(0,0,W,H);ctx.restore()}
 function drawMapLayers(x,y,size,originX,originY,span,labels=false){const s=size/span,mx=x-originX*s,my=y-originY*s;ctx.save();ctx.beginPath();ctx.rect(x,y,size,size);ctx.clip();drawMiniTerrain(mx,my,s);ctx.fillStyle='#d7c6a3';for(const b of buildings)ctx.fillRect(mx+b.x*s,my+b.y*s,Math.max(2,b.w*s),Math.max(2,b.h*s));
