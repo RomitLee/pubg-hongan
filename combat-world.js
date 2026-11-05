@@ -1,8 +1,11 @@
 'use strict';
 let vehicles=[],damageFlash=0,damageAngle=0,lastDamageAngle=0,noise=null;
-function aimAngle(){return Math.atan2((mouse.y-H/2)/PROJECTION,mouse.x-W/2)}
+function aimAngle(){return Math.atan2((mouse.y-(H/2-48))/PROJECTION,mouse.x-W/2)}
 function insideBuilding(o){return buildings.find(b=>rectHit(o.x,o.y,0,b))}
-function punch(){breakStealth();if(shotTimer>0||heal)return;shotTimer=.48;const angle=aimAngle();effects.push({x:p.x+Math.cos(angle)*35,y:p.y+Math.sin(angle)*35,r:23,color:'#f7dfaa',life:.12});let e=enemies.find(e=>e.hp>0&&dist(e,p)<65&&Math.cos(Math.atan2(e.y-p.y,e.x-p.x)-angle)>.45&&lineClear(p,e));if(e){e.hp-=24;e.playerHit=true;e.memory={x:p.x,y:p.y,until:time+3};e.angle=Math.atan2(p.y-e.y,p.x-e.x)}}
+const meleeStats={'拳头':{damage:24,range:82,rate:.48,row:0},'平底锅':{damage:58,range:100,rate:.75,row:1},'匕首':{damage:38,range:90,rate:.32,row:2},'砍刀':{damage:65,range:120,rate:.7,row:3}};
+function projectileHits(b,o){const boss=o.bossId!==undefined,h=boss?158:100,w=boss?48:23,dy=(b.y-o.y)*PROJECTION-48+h*.5;return ((b.x-o.x)/w)**2+(dy/(h*.5))**2<=1}
+function punch(){if(shotTimer>0||heal)return;breakStealth();const m=meleeStats[p.melee||'拳头'];shotTimer=m.rate;p.meleeUntil=time+.32;p.meleeAngle=aimAngle();effects.push({x:p.x+Math.cos(p.meleeAngle)*45,y:p.y+Math.sin(p.meleeAngle)*45-40/PROJECTION,r:24,color:'#f7dfaa',life:.18});for(const e of enemies.filter(e=>e.hp>0&&dist(e,p)<m.range&&Math.cos(Math.atan2(e.y-p.y,e.x-p.x)-p.meleeAngle)>.25&&lineClear(p,e))){e.hp-=m.damage;e.playerHit=true;e.memory={x:p.x,y:p.y,until:time+3}}}
+function rebalanceGroundLoot(){let gunIndex=0,gearIndex=0;loot=loot.filter(i=>{if(i.kind==='gun')return ++gunIndex%4===0;if((i.kind==='helmet'||i.kind==='vest')&&i.level===3)return ++gearIndex%12===0;return true});const anchors=loot.filter(i=>i.kind==='ammo');for(let i=0;i<anchors.length;i+=9){const o=anchors[i];loot.push({x:o.x+24,y:o.y,kind:'melee',name:['平底锅','匕首','砍刀'][Math.floor(i/9)%3],count:1})}}
 function updateEnemy(e,dt){
 if(e.bossId!==undefined){updateBoss(e,dt);return}
 if(e.hp<=0)return;if(e.stunned>0){e.stunned-=dt;return}e.cd-=dt;e.wander-=dt;e.walking=false;
