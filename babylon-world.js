@@ -3,7 +3,7 @@
 // Characters are animated image planes in a genuinely perspective 3D world.
 const battle3D={engine:null,scene:null,camera:null,objects:new Map(),materials:new Map(),roofGroups:[],ready:false};
 function b3Material(name,color){if(battle3D.materials.has(name))return battle3D.materials.get(name);const m=new BABYLON.StandardMaterial(name,battle3D.scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.06,.06,.06);battle3D.materials.set(name,m);return m}
-function b3Atlas(key){const id='atlas-'+key;if(battle3D.materials.has(id))return battle3D.materials.get(id);const m=b3Material(id,'#ffffff'),a=rasterAssets[key];m.diffuseTexture=new BABYLON.Texture(a.src,battle3D.scene,false,false);m.diffuseTexture.hasAlpha=true;m.useAlphaFromDiffuseTexture=true;m.backFaceCulling=false;m.transparencyMode=BABYLON.Material.MATERIAL_ALPHATEST;m.alphaCutOff=.22;m.specularColor=BABYLON.Color3.Black();return m}
+function b3Atlas(key){const id='atlas-'+key;if(battle3D.materials.has(id))return battle3D.materials.get(id);const m=b3Material(id,'#ffffff'),a=rasterAssets[key];m.diffuseTexture=new BABYLON.Texture(a.src,battle3D.scene,false,true);m.diffuseTexture.hasAlpha=true;m.useAlphaFromDiffuseTexture=true;m.backFaceCulling=false;m.transparencyMode=BABYLON.Material.MATERIAL_ALPHATEST;m.alphaCutOff=.22;m.specularColor=BABYLON.Color3.Black();return m}
 function b3UV(mesh,col,row,cols,rows){const pad=.003,u0=col/cols+pad,u1=(col+1)/cols-pad,v0=1-(row+1)/rows+pad,v1=1-row/rows-pad;mesh.setVerticesData(BABYLON.VertexBuffer.UVKind,[u0,v0,u1,v0,u1,v1,u0,v1]);}
 function b3Sprite(name,key,col,row,cols,rows,width,height,ground=false){const m=BABYLON.MeshBuilder.CreatePlane(name,{width,height,sideOrientation:BABYLON.Mesh.FRONTSIDE},battle3D.scene);m.material=b3Atlas(key);b3UV(m,col,row,cols,rows);if(ground)m.rotation.x=Math.PI/2;else m.billboardMode=BABYLON.Mesh.BILLBOARDMODE_Y;m.isPickable=false;return m}
 function b3Box(name,x,z,w,d,h,material,y=0){const m=BABYLON.MeshBuilder.CreateBox(name,{width:w,depth:d,height:h},battle3D.scene);m.position.set(x+w/2,y+h/2,z+d/2);m.material=material;m.isPickable=false;m.receiveShadows=true;return m}
@@ -18,7 +18,7 @@ function b3Terrain(){
  path(islandRiver,'#b5ad8c',29);path(islandRiver,'#295368',19);
  for(const road of islandRoads){path(road,'#aeac91',17);path(road,'#676e69',11);c.setLineDash([8,12]);path(road,'#d7d4b7',.8);c.setLineDash([])}
  c.fillStyle='#737e79';c.fillRect(960,1865,520,55);c.fillStyle='#ece8ca';for(let x=980;x<1460;x+=50)c.fillRect(x,1890,22,3);c.restore();tex.update();
- const ground=BABYLON.MeshBuilder.CreateGround('island',{width:WORLD,height:WORLD},s);ground.position.set(WORLD/2,0,WORLD/2);const mat=b3Material('island','#ffffff');mat.diffuseTexture=tex;ground.material=mat;ground.isPickable=false;
+ const ground=BABYLON.MeshBuilder.CreateGround('island',{width:WORLD,height:WORLD},s);ground.position.set(WORLD/2,0,WORLD/2);const mat=b3Material('island','#ffffff');tex.vScale=-1;tex.vOffset=1;mat.diffuseTexture=tex;ground.material=mat;ground.isPickable=false;
 }
 function b3Structures(){
  const wallMat=b3Material('plaster','#b7b1a1'),wood=b3Material('wood','#897359'),roofMat=b3Material('roof','#6a625b');
@@ -50,7 +50,7 @@ function b3Camera(){const h=b3Altitude(),c=battle3D.camera,target=new BABYLON.Ve
 function b3Aim(){if(!battle3D.ready||!p)return 0;const s=battle3D.scene,ray=s.createPickingRay(mouse.x* battle3D.engine.getRenderWidth()/W,mouse.y*battle3D.engine.getRenderHeight()/H,BABYLON.Matrix.Identity(),battle3D.camera),d=ray.intersectsPlane(new BABYLON.Plane(0,1,0,-48));if(d===null)return 0;const at=ray.origin.add(ray.direction.scale(d));return Math.atan2(at.z-p.y,at.x-p.x)}
 function b3Sync(id,make,update,seen){let m=battle3D.objects.get(id);if(!m){m=make();battle3D.objects.set(id,m)}seen.add(id);m.setEnabled(true);update(m);return m}
 function b3Actor(o,player,seen){const boss=o.bossId!==undefined,moving=o.movedUntil>time||o.walking;let key,col,row,cols,rows;
- if(boss){key='bosses';cols=4;rows=4;col=o.bossId%4;row=Math.floor(o.bossId/4)}else if(!player){key='minions';cols=7;rows=8;row=o.visual??0;col=moving?Math.floor(o.runPhase||time*7)%7:0}else if(!weapon()){key='melee';cols=rows=4;row=meleeStats[p.melee||'拳头'].row;col=p.meleeUntil>time?Math.min(3,Math.floor((.32-p.meleeUntil+time)/.08)):0}else{key=moving?'running':'characters';cols=moving?8:4;rows=moving?8:2;row=moving?selected:Math.floor(selected/4);col=moving?Math.floor(o.runPhase||0)%8:selected%4}
+ if(boss){key='bosses';cols=5;rows=2;col=o.bossId%5;row=Math.floor(o.bossId/5)}else if(!player){key='minions';cols=7;rows=8;row=o.visual??0;col=moving?Math.floor(o.runPhase||time*7)%7:0}else if(!weapon()){key='melee';cols=rows=4;row=meleeStats[p.melee||'拳头'].row;col=p.meleeUntil>time?Math.min(3,Math.floor((.32-p.meleeUntil+time)/.08)):0}else{key=moving?'running':'characters';cols=moving?8:4;rows=moving?8:2;row=moving?selected:Math.floor(selected/4);col=moving?Math.floor(o.runPhase||0)%8:selected%4}
  const h=boss?190:112,a=rasterAssets[key],w=h*(a.naturalWidth/cols)/(a.naturalHeight/rows);
  b3Sync(o,()=>b3Sprite('actor',key,col,row,cols,rows,w,h),m=>{m.material=b3Atlas(key);m.scaling.x=w/(m.getBoundingInfo().boundingBox.maximum.x*2);b3UV(m,col,row,cols,rows);m.position.set(o.x,h*.45+(player?b3Altitude():0),o.y);m.visibility=player&&skill.active==='stealth'?.3:1},seen);
 }
@@ -63,7 +63,7 @@ function drawBattle3D(){
  for(const e of enemies)if(dist(e,p)<5500)b3Actor(e,false,seen);
  if(!p.vehicle&&air!=='plane'&&air!=='parachute')b3Actor(p,true,seen);
  for(const v of vehicles){if(dist(v,p)>5500)continue;const n=v.type==='bike'?9:v.type==='boat'?10:8;b3Sync(v,()=>b3Sprite('vehicle','world',n%4,Math.floor(n/4),4,4,145,120),m=>m.position.set(v.x,50,v.y),seen)}
- if(air==='plane'||air==='parachute'){const n=air==='plane'?3:0,h=air==='plane'?400:210;b3Sync('air',()=>b3Sprite('air','air',n%2,Math.floor(n/2),2,2,h,h),m=>{b3UV(m,n%2,Math.floor(n/2),2,2);m.scaling.setAll(h/400);m.position.set(p.x,b3Altitude()+h*.6,p.y)},seen)}
+ if(air==='plane'||air==='parachute'){const n=air==='plane'?3:0,h=air==='plane'?400:210;b3Sync('air',()=>b3Sprite('air','air',n%2,Math.floor(n/2),2,2,800,400),m=>{b3UV(m,n%2,Math.floor(n/2),2,2);m.scaling.setAll(h/400);m.position.set(p.x,b3Altitude()+h*.6,p.y)},seen)}
  for(const i of [...loot,...boxes]){if(dist(i,p)>2200)continue;const box=!!i.items,n=box?8:itemAtlasIndex(i),color=box?'#ffce78':i.kind==='gun'?'#ffe59d':'#90efe0';b3Sync(i,()=>b3Sprite('loot',box?'effects':'items',n%4,Math.floor(n/4),4,4,box?72:42,box?72:42),m=>{m.position.set(i.x,24+Math.sin(time*3+i.x)*3,i.y)},seen);if(dist(i,p)<350&&!i.empty)b3Label(i,box?'◆ 战利品箱':i.name,color,65)}
  for(const b of bullets)b3Sync(b,()=>{const m=BABYLON.MeshBuilder.CreateSphere('bullet',{diameter:7,segments:4},battle3D.scene);m.material=b3Material('tracer','#ffe59d');m.material.emissiveColor=new BABYLON.Color3(1,.65,.2);return m},m=>m.position.set(b.x,48,b.y),seen);
  for(const sp of bossSpells)b3Sync(sp,()=>{let m;
