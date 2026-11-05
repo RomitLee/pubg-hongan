@@ -4,6 +4,7 @@ function aimAngle(){return Math.atan2((mouse.y-H/2)/PROJECTION,mouse.x-W/2)}
 function insideBuilding(o){return buildings.find(b=>rectHit(o.x,o.y,0,b))}
 function punch(){breakStealth();if(shotTimer>0||heal)return;shotTimer=.48;const angle=aimAngle();effects.push({x:p.x+Math.cos(angle)*35,y:p.y+Math.sin(angle)*35,r:23,color:'#f7dfaa',life:.12});let e=enemies.find(e=>e.hp>0&&dist(e,p)<65&&Math.cos(Math.atan2(e.y-p.y,e.x-p.x)-angle)>.45&&lineClear(p,e));if(e){e.hp-=24;e.playerHit=true;e.memory={x:p.x,y:p.y,until:time+3};e.angle=Math.atan2(p.y-e.y,p.x-e.x)}}
 function updateEnemy(e,dt){
+if(e.bossId!==undefined){updateBoss(e,dt);return}
 if(e.hp<=0)return;if(e.stunned>0){e.stunned-=dt;return}e.cd-=dt;e.wander-=dt;e.walking=false;
 const d=dist(e,p),angle=Math.atan2(p.y-e.y,p.x-e.x),delta=Math.atan2(Math.sin(angle-e.angle),Math.cos(angle-e.angle));
 const room=insideBuilding(p),sameHouse=room===insideBuilding(e);

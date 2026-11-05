@@ -1,0 +1,32 @@
+'use strict';
+const bossTypes=[
+{name:'陨星 · 烬岩',spell:'天降陨石',color:'#ff9a4f',cd:10,hp:1400,kind:'meteor',desc:'三颗陨石延迟坠落，离开橙色圆圈'},
+{name:'焚城 · 赤曜',spell:'火墙术',color:'#ff5b38',cd:11,hp:1200,kind:'fire',desc:'三道火墙持续燃烧，绕开红色长条'},
+{name:'穿心 · 鸦羽',spell:'万千穿心',color:'#d6b8ff',cd:9,hp:1100,kind:'arrows',desc:'扇形箭雨，逃出紫色扇区'},
+{name:'霜后 · 凝冬',spell:'极寒牢笼',color:'#7fe3ff',cd:12,hp:1250,kind:'frost',desc:'冰霜外环封锁，内圈是安全区'},
+{name:'雷罚 · 震霆',spell:'连环雷击',color:'#a99aff',cd:9,hp:1150,kind:'lightning',desc:'五次定点雷击，持续移动躲避'},
+{name:'疫医 · 腐息',spell:'瘟疫毒沼',color:'#a8ed70',cd:13,hp:1350,kind:'poison',desc:'三片毒沼残留六秒，撤离绿色区域'},
+{name:'沙王 · 砾皇',spell:'流沙震荡',color:'#f1cf80',cd:10,hp:1500,kind:'sand',desc:'两次大地震荡，离开金色圆圈'},
+{name:'影刃 · 无相',spell:'幻影突袭',color:'#68eedf',cd:8,hp:1050,kind:'shadow',desc:'三道交叉影刃，离开青色直线'},
+{name:'血契 · 绯祭',spell:'猩红汲取',color:'#ff7ca0',cd:12,hp:1300,kind:'blood',desc:'血阵命中恢复首领生命，及时离开'},
+{name:'械皇 · 零号',spell:'蜂群轰炸',color:'#8acbff',cd:11,hp:1600,kind:'drones',desc:'六架无人机环形投弹，穿过弹圈空隙'}
+];
+let bossSpells=[];
+function initBosses(){bossSpells=[];const anchors=[[430,330],[1120,240],[1650,570],[2030,350],[1110,860],[490,980],[920,1260],[1880,1080],[1740,1470],[1300,1940]];bossTypes.forEach((b,i)=>{const anchor={x:anchors[i][0]*MAP_SCALE,y:anchors[i][1]*MAP_SCALE};let o=null;for(let j=0;j<1500;j++){const r=j<1?0:Math.min(2200,60+Math.sqrt(j)*65),a=j*2.39996,x=anchor.x+Math.cos(a)*r,y=anchor.y+Math.sin(a)*r;if(x>60&&y>60&&x<WORLD-60&&y<WORLD-60&&!blocked(x,y,38)&&!insideBuilding({x,y})){o={x,y};break}}if(!o)throw Error('首领出生点不可达：'+b.name);enemies.push({...o,...enemyEquipment(2,i+100),bossId:i,hp:b.hp,maxHp:b.hp,type:2,cd:4+i*.3,angle:0,med:{'急救包':3,'医疗箱':1,'烟雾弹':3},helmet:armorItem('helmet',3),vest:armorItem('vest',3)})})}
+function updateBoss(e,dt){if(e.hp<=0)return;if(e.stunned>0){e.stunned-=dt;return}e.cd-=dt;e.walking=false;const d=dist(e,p),hidden=skill.active==='stealth'&&skill.left>0||inSmoke(p)||smokeOccludes(e,p);if(hidden||d>900||!lineClear(e,p)||insideBuilding(p)!==insideBuilding(e))return;e.angle=Math.atan2(p.y-e.y,p.x-e.x);if(d>380){move(e,Math.cos(e.angle)*58*dt,Math.sin(e.angle)*58*dt,30);e.walking=true}if(e.cd<=0){castBoss(e);e.cd=bossTypes[e.bossId].cd}}
+function castBoss(e){const b=bossTypes[e.bossId],x=p.x,y=p.y,a=e.angle;const add=(shape,xx,yy,r,delay=1.6,duration=.4,angle=0,length=0)=>bossSpells.push({owner:e,kind:b.kind,shape,x:xx,y:yy,r,delay,left:duration,duration,angle,length,color:b.color,tick:0});
+if(b.kind==='meteor')for(let j=0;j<3;j++)add('circle',x+(j-1)*150,y+(j===1?0:90),95,1.8+j*.25);
+if(b.kind==='fire')for(let j=-1;j<=1;j++)add('line',x+Math.cos(a)*j*170,y+Math.sin(a)*j*170,34,1.8,4,a+Math.PI/2,340);
+if(b.kind==='arrows')add('cone',e.x,e.y,650,1.7,.65,a);
+if(b.kind==='frost')add('ring',x,y,225,2,2);
+if(b.kind==='lightning')for(let j=0;j<5;j++)add('circle',x+Math.cos(j*2.4)*j*48,y+Math.sin(j*2.4)*j*48,65,1.1+j*.35);
+if(b.kind==='poison')for(let j=0;j<3;j++)add('circle',x+Math.cos(j*2.1)*110,y+Math.sin(j*2.1)*110,125,1.7,6);
+if(b.kind==='sand'){add('circle',x,y,180,1.8);add('ring',x,y,320,2.8,.6)}
+if(b.kind==='shadow')for(let j=0;j<3;j++)add('line',x,y,24,1.2+j*.25,.3,a+j*Math.PI/3,500);
+if(b.kind==='blood')add('circle',x,y,190,2.2,2);
+if(b.kind==='drones')for(let j=0;j<6;j++)add('circle',x+Math.cos(j*Math.PI/3)*165,y+Math.sin(j*Math.PI/3)*165,80,1.8+j*.12,.5);
+toast('首领 '+b.name+' · '+b.spell+'：'+b.desc)}
+function bossSpellContains(s,o){const dx=o.x-s.x,dy=o.y-s.y,d=Math.hypot(dx,dy);if(s.shape==='circle')return d<s.r;if(s.shape==='ring')return d<s.r&&d>s.r*.6;if(s.shape==='cone'){const a=Math.atan2(dy,dx)-s.angle;return d<s.r&&Math.abs(Math.atan2(Math.sin(a),Math.cos(a)))<.52}return Math.abs(dx*Math.cos(s.angle)+dy*Math.sin(s.angle))<s.length/2&&Math.abs(-dx*Math.sin(s.angle)+dy*Math.cos(s.angle))<s.r}
+function updateBossSpells(dt){for(const s of bossSpells){if(s.owner.hp<=0){s.left=0;continue}if(s.delay>0){s.delay-=dt;continue}s.left-=dt;s.tick-=dt;if(s.tick<=0){s.tick=.4;if(bossSpellContains(s,p)&&lineClear(s,p)){lastDamageAngle=Math.atan2(s.y-p.y,s.x-p.x);hitPlayer(['fire','poison','blood'].includes(s.kind)?9:23);if(s.kind==='blood')s.owner.hp=Math.min(s.owner.maxHp,s.owner.hp+24)}}}bossSpells=bossSpells.filter(s=>s.owner.hp>0&&s.left>0)}
+function drawBoss(e){const b=bossTypes[e.bossId];ctx.save();ctx.translate(e.x,e.y);ctx.strokeStyle=b.color;ctx.globalAlpha=.6;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,46,24,0,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;ctx.scale(1,1/PROJECTION);const a=rasterAssets.bosses;if(assetReady('bosses')){const cw=a.naturalWidth/5,ch=a.naturalHeight/2;ctx.drawImage(a,e.bossId%5*cw+2,Math.floor(e.bossId/5)*ch+2,cw-4,ch-4,-84,-158+(e.walking?Math.sin(time*7)*3:0),168,168)}ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillStyle=b.color;ctx.fillText(b.name,0,-180);ctx.fillStyle='#141b25';ctx.fillRect(-65,-173,130,6);ctx.fillStyle=b.color;ctx.fillRect(-65,-173,130*Math.max(0,e.hp/e.maxHp),6);ctx.restore()}
+function drawBossSpells(){for(const s of bossSpells){if(!sceneVisible(s,900))continue;ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.angle);const warn=s.delay>0;ctx.strokeStyle=s.color;ctx.fillStyle=s.color;ctx.lineWidth=warn?3:6;ctx.globalAlpha=warn?.16+.08*Math.sin(performance.now()/95):.38;ctx.beginPath();if(s.shape==='line')ctx.rect(-s.length/2,-s.r,s.length,s.r*2);else if(s.shape==='cone'){ctx.moveTo(0,0);ctx.arc(0,0,s.r,-.52,.52);ctx.closePath()}else{ctx.arc(0,0,s.r,0,Math.PI*2);if(s.shape==='ring'){ctx.moveTo(s.r*.6,0);ctx.arc(0,0,s.r*.6,0,Math.PI*2,true)}}ctx.fill();ctx.globalAlpha=.85;ctx.stroke();if(!warn){ctx.rotate(-s.angle);ctx.globalAlpha=.85;const n={meteor:6,fire:6,arrows:8,frost:3,lightning:7,poison:0,sand:5,shadow:8,blood:9,drones:7}[s.kind];artTile('effects',n,-60,-95,120,120);if(s.kind==='meteor'||s.kind==='lightning'){ctx.strokeStyle=s.color;ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(-35,-240*Math.max(0,s.left/s.duration));ctx.lineTo(0,0);ctx.stroke()}}ctx.restore()}}
