@@ -1,0 +1,28 @@
+'use strict';
+const armorReduction=[0,.30,.40,.55],armorDurability=[0,100,150,220];
+function armorItem(kind,level,durability=armorDurability[level]){return {kind,level,durability,name:level+'级'+(kind==='helmet'?'头盔':'防弹衣'),count:1}}
+function applyArmor(o,damage,head=false){let key=head?'helmet':'vest',a=o[key];if(!a||a.durability<=0)return damage;let absorbed=Math.min(a.durability,damage*armorReduction[a.level]);a.durability-=absorbed;return damage-absorbed}
+function enemyEquipment(type,i){let name=type===2?'Kar98k':type===0?'UMP45':'AKM';return {gun:makeGun(name),reserve:guns[name].cap*3,helmet:armorItem('helmet',i%3+1),vest:armorItem('vest',(i+1)%3+1),med:{'烟雾弹':1,'绷带':1+i%3,'急救包':i%2}}}
+function enemyBox(e){let items=[{kind:'gun',name:e.gun.name,rounds:e.gun.rounds,count:1},{kind:'ammo',name:guns[e.gun.name].ammo,count:e.reserve},...Object.entries(e.med).map(([name,count])=>({kind:'med',name,count})),{...e.helmet},{...e.vest}].filter(i=>i.count>0);return {x:e.x,y:e.y,items,empty:!items.length}}
+function toggleBag(){bag=!bag;keys={};mouse.down=mouse.clicked=false;renderInventory(true)}
+function dropItem(kind,key){if(state!=='playing')return;let item;
+if(kind==='gun'){let w=p.weapons[+key];if(!w)return;item={kind,name:w.name,rounds:w.rounds,count:1};p.weapons[+key]=null;reloading=0;if(p.slot===+key&&p.weapons[1-p.slot])p.slot=1-p.slot}
+else if(kind==='helmet'||kind==='vest'){if(!p[kind])return;item={...p[kind]};p[kind]=null}
+else{let source=kind==='ammo'?p.ammo:p.med;if(!source[key])return;item={kind,name:key,count:source[key]};source[key]=0;if(kind==='med')heal=0}
+loot.push({...item,x:p.x+22,y:p.y+12,pickupAfter:time+4,manualOnly:true});toast('已丢弃 '+item.name);updateHud();renderInventory(true)}
+function inventoryTake(source,index,boxIndex){if(state!=='playing')return;let container=source==='box'?boxes[boxIndex]:null,item=container?container.items[index]:loot[index];if(!item)return;if(container?dist(container,p)>120:dist(item,p)>85)return;
+// takeItem负责装备、替换与掉落；箱内物品先移至地面再执行同一流程。
+if(container){container.items.splice(index,1);loot.push({...item,x:p.x,y:p.y});item=loot[loot.length-1]}
+takeItem(item,true);if(container)container.empty=container.items.length===0;toast('已拾取 '+item.name);updateHud();renderInventory(true)}
+function inventoryAction(e){let b=e.target.closest('button[data-inventory]');if(!b)return;e.preventDefault();e.stopPropagation();if(b.dataset.inventory==='select-tool'){selectedTool=b.dataset.key;toast('Q道具已选择：'+selectedTool);renderInventory(true);updateHud()}if(b.dataset.inventory==='close')toggleBag();if(b.dataset.inventory==='drop')dropItem(b.dataset.kind,b.dataset.key);if(b.dataset.inventory==='take')inventoryTake(b.dataset.source,+b.dataset.index,+b.dataset.box)}
+let inventorySignature='';
+function renderInventory(force=false){const panel=document.querySelector('#inventory');if(!panel)return;panel.hidden=!bag;if(!bag){inventorySignature='';return}
+let nearby=loot.map((item,index)=>({item,index})).filter(o=>dist(o.item,p)<85),crates=boxes.map((box,index)=>({box,index})).filter(o=>dist(o.box,p)<120&&!o.box.empty);
+let signature=JSON.stringify([selectedTool,p.weapons,p.ammo,p.med,p.helmet&&[p.helmet.level,Math.ceil(p.helmet.durability)],p.vest&&[p.vest.level,Math.ceil(p.vest.durability)],nearby,crates]);if(!force&&signature===inventorySignature)return;inventorySignature=signature;
+let row=(i,button)=>inventoryTile(i,button);
+let drop=(kind,key)=>`<button data-inventory="drop" data-kind="${kind}" data-key="${key}">丢弃</button>`;
+let take=(i,source,index,bi='')=>row(i,`<button data-inventory="take" data-source="${source}" data-index="${index}" data-box="${bi}">${i.kind==='gun'&&p.weapons.every(Boolean)?'替换手持枪':'拾取 / 装备'}</button>`);
+panel.innerHTML=`<header><div><small>INVENTORY / LOOT</small><h2>战术背包</h2></div><button data-inventory="close">关闭 E / Tab</button></header><p class="inventory-note">鼠标悬停物品格查看详情 · 点击格内按钮管理物品 · 打开背包不会暂停战斗。</p><div class="inventory-columns">${equipmentPane()}<section><h3>武器装备</h3>${p.weapons.map((w,i)=>w?row({...w,kind:'gun'},drop('gun',i)):`<div class="inventory-empty">武器栏 ${i+1} · 空</div>`).join('')}<h3>备用弹药</h3>${Object.entries(p.ammo).filter(([n,c])=>c>0).map(([name,count])=>row({kind:'ammo',name,count},drop('ammo',name))).join('')||'<p>暂无弹药</p>'}<h3>道具 / 药品 · 选择Q快捷使用</h3>${Object.entries(p.med).filter(([n,c])=>c>0).map(([name,count])=>row({kind:'med',name,count},`<div class="item-actions"><button data-inventory="select-tool" data-key="${name}">${selectedTool===name?'Q 已选择':'设为Q道具'}</button>${drop('med',name)}</div>`)).join('')||'<p>暂无药品</p>'}</section><section>${crates.map(o=>`<h3 class="crate-heading">敌人战利品箱 · ${o.box.items.length}件物品</h3>${o.box.items.map((i,j)=>take(i,'box',j,o.index)).join('')}`).join('')}<h3>附近地面</h3>${nearby.map(o=>take(o.item,'ground',o.index)).join('')||'<p>靠近物资后可在这里拾取。</p>'}<p class="inventory-note">两个武器栏已满时，点击新枪替换当前手持武器，旧枪掉在脚下。</p></section></div>`;
+}
+
+function autoLootBoxes(collected=[]){for(const box of boxes){if(box.empty||dist(box,p)>85)continue;for(const item of [...box.items]){let ground={...item,x:p.x,y:p.y};loot.push(ground);if(takeItem(ground)){box.items.splice(box.items.indexOf(item),1);collected.push(item.name)}else loot.splice(loot.indexOf(ground),1)}box.empty=box.items.length===0}return collected}
