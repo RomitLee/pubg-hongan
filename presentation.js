@@ -14,4 +14,4 @@ function drawRaisedTree(t){if(drawRasterTree(t))return;ctx.save();const z=Math.m
 function drawSceneEntities(){let entries=[...(mapId===0?islandProps.map(o=>({y:o.y*MAP_SCALE,draw:()=>drawIslandProp(o)})):[]),...trees.filter(o=>sceneVisible(o,400)).map(o=>({y:o.y,draw:()=>drawRaisedTree(o)})),...buildings.filter(o=>sceneVisible(o,800)).map(o=>({y:o.y+o.h,draw:()=>drawRaisedHouse(o)})),...enemies.filter(o=>sceneVisible(o,180)).map(o=>({y:o.y,draw:()=>{actor(o,o.type===2?'#806d89':o.type===0?'#a77552':'#8d5146',o.angle,false);if(o.hp<80){ctx.fillStyle='#713c38';ctx.fillRect(o.x-15,o.y-65/PROJECTION,30,4);ctx.fillStyle='#f8be83';ctx.fillRect(o.x-15,o.y-65/PROJECTION,30*Math.max(0,o.hp/110),4)}}}))];if(!p.vehicle&&!['plane','parachute'].includes(state==='paused'?resumeState:state))entries.push({y:p.y,draw:()=>actor(p,chars[selected][3],aimAngle(),true)});entries.sort((a,b)=>a.y-b.y).forEach(e=>e.draw())}
 
 
-function sceneVisible(o,pad=300){return Math.abs(o.x-p.x)<W/2+pad&&Math.abs(o.y-p.y)<H/PROJECTION/2+pad}
+function sceneVisible(o,pad=300){return Math.abs(o.x-p.x)<W/2/viewZoom()+pad&&Math.abs(o.y-p.y)<H/PROJECTION/2/viewZoom()+pad}
